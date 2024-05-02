@@ -1,0 +1,341 @@
+---
+title: "STAT240 Group 346-6 Project"
+author: "Aaron Lai, Arushi Taneja, Devagya Gupta, Diya Gopinath"
+date: "2024-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE, fig.height = 3)
+library(tidyverse)
+library(lubridate)
+library(kableExtra)
+library(reshape2)
+library(broman)
+theme_set(theme_minimal())
+```
+
+> Introduction
+
+The health of aquatic ecosystems is a growing concern, and understanding the dynamics of fish populations is crucial for assessing the broader environmental impacts and sustainability practices. To this end, we have analyzed the trends and variances in fish lengths and weights across different zones of Lake Wingra, covering the period from 1995 to the present (excluding 2020 due to data gaps). By examining these patterns, we aim to highlight the ecological shifts and conservation needs within this freshwater ecosystem.
+
+Our analysis is motivated by the need to evaluate the effects of environmental changes and sampling inconsistencies on Lake Wingra's biological community. We have used a comprehensive dataset collected by the North Temperate Lakes Long-Term Ecological Research Network, employing various methods to cover the lake's fish populations thoroughly.
+
+This study conducts rigorous statistical analyses, specifically through inference on single population means and comparison of multiple population means, to assess the variations and trends in fish sizes and weights across different zones and years in Lake Wingra. In this study, we hypothesize that fish lengths and weights in Lake Wingra, Wisconsin increase over time and attempt to see if the null hypothesis rejects or fails to reject, with our null hypothesis being that fish sizes/weights stay constant, and the alternate hypothesis being that they increase. In studying these trends, we can gain important insight on the potential effects of environmental and anthropogenic factors, for improving conservation strategies. 
+
+
+
+> Background
+
+This report examines a comprehensive dataset collected annually by the North Temperate Lakes Long-Term Ecological Research Network, focusing on the fish populations of Lake Wingra. The primary aim of this data collection is to monitor and understand the dynamics of fish assemblages across various lake zones. 
+
+Methods of sampling data include beach seines, traps for minnows or crayfish, boat-mounted electrofishing, and fyke nets in six areas near the shore. For samples from deep parts of the lake, vertical gill nets were used to get data. And to catch samples from areas with various water temperatures, muliple trammel nets were used to get data. Each fish is identified by species, with lengths measured for all individuals captured and weights and scales collected from a subset. These measurements allow us to analyze size distribution by species, lake, and year, providing a detailed view of the ecosystem's health and changes over time. 
+
+Some of the omitted data variables include lakeid (geographical location lake) because everything is in WI, sample date (literal mdy of catching day of a fish) because we mainly plotted by just year, and gearid (sampling data methods) and depth of fish found as it was irrelevant to what we were analyzing. Sex and fishpart were dropped variables, because our dataset did not have any values for them. 
+
+Source: https://ntl.limnology.wisc.edu/index.php/dataset/lake-wingra-fish-lengths-and-weights
+
+The dataset enables us to explore significant ecological questions, notably how fish sizes fluctate according to potential environmental variables and human activities impacting fish populations. In the dataset, multiple variables are constantly referenced throughout our study. Mainly, our data focused on the variables Year4 (the year a certain fish was caught), spname (the species name of the certain fish), rep (the frequency of fishes caught of those same characteristics), length (length of the certain fish), and weight (weight of the certain fish).
+
+A unique aspect of this dataset is the need for more data for 2020, a result of insufficient sampling likely impacted by global events such as the COVID-19 pandemic. This gap in data presents specific challenges for continuity in long-term ecological assessments.
+
+The remainder of this report will delve into a detailed analysis of the data to discern trends in fish lengths and weights across different zones of Lake Wingra and assess the impact of the missing 2020 data on overall trends. By closely examining these variables and their implications, we aim to contribute valuable insights toward managing and conserving Lake Wingra's diverse fish communities and overall ecosystem health.
+
+
+> Analysis and Graphs
+
+Our code starts off by reading in the data from a csv file named "Lake Wingra" which contains data that helps us explore significant ecological questions about the fish population. It contains data like name of the fish, its sex, length and weight consistently noted over years from 1995 to 2022. Our data does not contain the sex and fishpart column of the fish and drops all the missing values in our weight column.
+```{r}
+# READ IN THE DATA & CLEANING IT
+
+read = read_csv("../../data/lakewingra.csv")
+data <- read %>%
+  select(-sex, -fishpart) %>%
+  drop_na(weight)
+```
+
+Then the data finds out the top 5 species of fish for which we have the maximum data with the top one being `Bluegill with 1599 rows` containing its data and the lowest being `Blackcrappie with 667 rows`. This done by using the `group_by` function by grouping the data according to its species name and then `summarise` function to count all the data and arranging them in descending order by count using `arrange` function.
+```{r}
+# TOP 5 SPECIES CAUGHT
+top_5_species <- data %>% 
+  group_by(spname) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  head(n = 5)
+
+```
+
+```{r}
+top_5_species
+```
+
+Now that we have the data for top 5 species in our table, we find the average length per species of fish. This is done by first using `group_by` to group the data by the species name because we have to find average length per species. Then we use the `summarise` the function to make a new column named `average_length` which uses `mean` function to calculate the average for the column containing length and also dropping the rows that contain no data to avoid any discrepancies. We then use the `arrange` function to sort our data in descending order to find out the species with the highest and lowest average. This tells us that `LONGNOSEGAR` has maximum average length (751 mm) and  `SUNFISH` having the minimum average length (12 mm).
+```{r}
+# AVG LENGTH PER SPECIES
+avg_length_per_species <- data %>%
+  group_by(spname) %>%
+  summarise(average_length = mean(length, na.rm = TRUE),
+            .groups = 'drop')
+sorted_length <- avg_length_per_species %>%
+  arrange(desc(average_length))
+
+```
+
+```{r}
+sorted_length
+```
+
+We then move on to calculating the average length of top five species over the years. We start by making a column with the name of top five species of fish and then make a separate dataset which filters out the data of only the species that are in top 5. After that we group the data according to the species name and year column using `group_by`. Using the summarise function we calulate the the average length per species and year. We get a dataset of about 135 rows which to better analyse it we plot it into a graph.
+
+The line plot is made by colour coding it according to different species with red color for `BLACKCRAPPIE`, blue colour for `BLUEGILL`, green colour for `GOLDENSHINER`, purple colour for `LARGEMOUTHBASS` and orange colour for `YELLOWPERCH`. For `BLACKCRAPPIE` the average length over the years is not consistent, it starts and ends around the same length (150cm), going through a series of ups and downs over the years. The `BLUEGILL` average length has stayed somewhat same over the years, also starting and ending with the same length (100 cm). The `GOLDENSHINER` has an inconsistent average length over the years but it's bigger (from 127cm to 175cm)than it started. The `LARGEMOUTHBASS` has had an increasing average length over the years with having a boom around 2021 (325cm) and coming down the next year (250cm). the `YELLOWPERCH has` had a consistent average length over the years too with starting and ending at the same length (147cm).
+```{r}
+# Average Length of Top Five Species Over Years
+top_species <- c("BLUEGILL", "LARGEMOUTHBASS", "GOLDENSHINER", "YELLOWPERCH", "BLACKCRAPPIE")
+
+filtered_data <- data %>%
+  filter(spname %in% top_species)
+
+avg_length_data <- filtered_data %>%
+  group_by(spname, year4) %>%
+  summarise(average_length = mean(length, na.rm = TRUE), .groups = 'drop')
+
+average_length_plot <- ggplot(avg_length_data, aes(x = year4, y = average_length, color = spname)) +
+  geom_line() +
+  labs(title = "Average Length of Top Five Species Over Years",
+       x = "Year",
+       y = "Average Length (cm)",
+       color = "Species") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set1")
+```
+
+```{r}
+average_length_plot
+```
+
+Now we do the same thing for average weight per species. Our findings with by using the same function but on the `weight` column tells us that the fish the maximum average weight (6025 grams) is `BIGMOUTHBUFFALO` and the fish with the minimum average weight (0.3 grams) is `SUNFISH`. 
+```{r}
+# AVG WEIGHT PER SPECIES
+avg_weight_per_species <- data %>%
+  group_by(spname) %>%
+  summarise(average_weight = mean(weight, na.rm = TRUE),
+            .groups = 'drop')
+
+sorted_weight <- avg_weight_per_species %>%
+  arrange(desc(average_weight))
+
+```
+
+```{r}
+sorted_weight
+
+```
+
+The next graph analyzes the average length and weight of fish over time. The data is from 1995 to the current year (excluding 2020). From looking at the graph, it seems that the average fish length is generally between 165 and 95. However, the average fish length over time hovers around 140. With a high points at specific years and a low point in 1996. The avereage weight varies widely, with changes between years being quite high. The high point is in 2022 and the low point is in 1996. There seems to not be much correlation between the average weight and length of these fish over time.
+```{r}
+# Time Series Plots: Plot the average length and weight of fish species over time (years) from 1995 to present (excluding 2020).
+
+yearly_data <- data %>%
+  group_by(year4) %>%
+  summarise(
+    avglength = mean(length, na.rm = TRUE),
+    avgweight = mean(weight, na.rm = TRUE),
+    catcheffort = sum(rep, na.rm = TRUE)
+  )
+
+
+p1 <- ggplot(yearly_data, aes(x = year4)) +
+  geom_line(aes(y = avglength, colour = "Average Length")) +  
+  geom_line(aes(y = avgweight, colour = "Average Weight")) +  
+  scale_color_manual(values = c("Average Length" = "red", "Average Weight" = "blue")) +
+  labs(title = "Average Length and Weight of Fish Over Time",
+       x = "Year",
+       y = "Average Measurements",
+       colour = "Legend") +
+  theme_minimal()
+
+```
+
+```{r}
+p1
+```
+
+In this part of our code, we created a regression model of predicting length values using the data of weight using the Bluegill fish data specifically, since per top_5_species data, we know Bluegill fishes have the most data entries for length and weight. To start this process, we make a table of the rep (population frequency) of bluegill per year so we can single out the year with the most data on fishes.
+We then take this highest year of reps (1996) and print out summary statistics for it so we can obtain data regarding the intercepts, slopes, and residuals to create an estimated slope of the length (intercept=35.00 ish and slope = 1.76). Then, we filter our the years 1998 and 2011. 
+As we see, for year 1998, b0, or the estimated intercept from 1996 data and b1, the slope, is used to calculate the estimated values of the fish length of 1998 using the weight. Similarly, done for 2011, using b2, or the estimated intercept, and b3, the slope, for estimated values of fish length of 2011 using the weight.
+We plot the residuals plot to show our error metric of calculating the estimate length. 
+We also test the relationship between the length and weight by using the power law. Our alpha value is 3.64 and our beta value is 0.33, per the lm regression summary statistics. We put this, with the weight vectors, in the power law equation to solve for y_hat, which we use to caluclate the later plot for predicted vs actual length over the years.
+To see if the relationship between length and weight is linear, we formulate the null hypothesis so that H0: B1 = 1 and Ha: B1 != 1. We calculate the t stat value, which ends up being -335.7179. Our calculated p value is 0. 
+```{r}
+# REGRESSION MODEL FOR BLUEGILL IN 1996 TO PREDICT DATA IN 1998
+bluegill_data = data %>%
+  filter(spname == "BLUEGILL")
+
+most_rep_year = bluegill_data %>%
+  group_by(year4) %>%
+  summarize(sum_rep = sum(rep)) %>%
+  arrange(desc(sum_rep))
+
+bluegill_1996 <- bluegill_data %>%
+  filter(year4 == most_rep_year$year4[1])
+
+bluegill_lm = lm(log(length) ~ log(weight), data = bluegill_1996)
+
+alpha = 3.641303
+beta = 0.325207
+alpha_hat = exp(alpha)
+beta_hat = beta
+y_hat = alpha_hat*bluegill_1996$weight^beta_hat
+
+t = (beta_hat - 1)/0.002010
+n = 550
+p_val = pt(t, 548) * 2
+
+bluegill_1998 <- bluegill_data %>%
+  filter(year4 == most_rep_year$year4[2])
+
+bluegill_2011 <- bluegill_data %>%
+  filter(year4 == most_rep_year$year4[4])
+
+b0 = 34.99724
+b1 = 1.76297
+est_1998 = b0 + 2*b1* bluegill_1998$weight
+est_1998
+
+b2 = 34.99724
+b3 = 1.76297
+est_2011 = b2 + 15*b3* bluegill_2011$weight
+
+```
+
+```{r}
+most_rep_year
+```
+
+```{r}
+summary(bluegill_lm)
+```
+
+```{r}
+plot(bluegill_lm,which=c(1,2))
+```
+
+
+Then we fit the estimated length data into a dataframe called comparison and comparison1 respectively per 1998 and 2011, that include columns on actual length data versus predicted length based on our calculated values.
+```{r}
+comparison <- data.frame(Actual_Length = bluegill_1998$length, Predicted_Length = est_1998)
+
+comparison1 <- data.frame(Actual_Length = bluegill_2011$length, Predicted_Length = est_2011)
+
+```
+
+```{r}
+head(comparison, n=10)
+```
+
+```{r}
+head(comparison1, n=10)
+```
+
+We then use a bar graph to plot this relationship between predicted and actual length values of Bluegill length over all years from 1996 to 2022 (exlcuding year 2020 due to lack of data). We can see from this graph that generally both actual and predicted values seem to increase over time, even if it is seemingly scaled to look slight. Our predicted regression values of the length are resonably estimated, as they aren't too far off the actual values. 
+```{r}
+#regression graph of estimated data vs actual data between all years of our dataset
+#shows length over time
+b0 <- 34.99724
+b1 <- 1.76297
+
+yr_seq <- setdiff(1996:2022, 2020)
+
+comp <- data.frame(Year = yr_seq, Act = NA, Pred = NA)
+
+for (year in yr_seq) {
+  subset_data <- subset(bluegill_data, year4 == year)
+  if (nrow(subset_data) > 0) {
+    est <- b0 + b1 * subset_data$weight
+    comp$Act[comp$Year == year] <- mean(subset_data$length)
+    comp$Pred[comp$Year == year] <- mean(est)
+  }
+}
+
+comp_long <- melt(comp, id.vars = "Year",
+                  measure.vars = c("Act", "Pred"),
+                  variable.name = "Type", value.name = "Length")
+
+
+comp_graph = ggplot(comp_long, aes(x = Year, y = Length, fill = Type)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7)) +
+  labs(title = "Annual Comparison of Actual and Predicted Lengths for Bluegill",
+       x = "Year", y = "Length (cm)") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+comp_graph
+```
+
+Then we run a Two Sample t-test on 'BLUEGILL' LENGTHS from years less than or including 2008, and lengths from years greater than or including 2009. A Two Sample t-test is a test that determines if there is a statistical difference between 2 means of 2 independent groups, which is helpful in this scenario since we want to analyze if the mean lengths of fish are increasing over time, or not The resulting p-value of this t-test is 0.01245, which is less than the alpha value of 0.05. This most likely suggests that the means are most likely statistically significantly different, so there are significant differences in the population lengths that are not a result of statistical differences. The 95% confidence interval is [-116.0439, -105.5429]. So on average, blue gill fish lengths tend to change over the first set of years versus the second set of years. 
+```{r}
+#length t test
+old_length <- data %>% filter(year4 <= 2008)
+new_length <- data %>% filter(year4 >= 2009)
+
+avg_l2005 <- mean(old_length$length, na.rm = TRUE)
+avg_l2015 <- mean(new_length$length, na.rm = TRUE)
+
+t <- t.test(old_length$length, new_length$length, var.equal = FALSE)
+```
+
+```{r}
+t
+```
+
+Then we run a second Two Sample t-test on 'BLUEGILL' WEIGHTS from years less than or including 2008, and lengths from years greater than or including 2009. A Two Sample t-test is a test that determines if there is a statistical difference between 2 means of 2 independent groups, which is helpful in this scenario since we want to analyze if the mean weights of fish are increasing over time, or not. The resulting p-value of this t-test is 0.05364, which is greater than the alpha value of 0.05. This most likely suggests that the means are not statistically significantly different. The 95% confidence interval is [-116.0439, -105.5429]. So on average, blue gill fish weights tend to remain the same over the first set of years versus the second set of years. 
+```{r}
+#weight t test
+old_weight <- data %>% filter(year4 <= 2008)
+new_weight <- data %>% filter(year4 >= 2009)
+
+avg_l2008 <- mean(old_weight$weight, na.rm = TRUE)
+avg_l2019 <- mean(new_weight$weight, na.rm = TRUE)
+
+t1 <- t.test(old_weight$weight, new_weight$weight, var.equal = FALSE)
+```
+
+```{r}
+t1
+```
+
+
+> Discussion/Interpretation
+
+The analysis provides crucial insights into the dynamics of fish populations within Lake Wingra in Wisconsin and their potential implications of the health and sustainability of the aquatic ecosystem. Our study aimed to see if our hypothesis about fish lengths/weights increase over time would be rejected or fail to reject that fish sizes/weights stay constant over time, and the alternate hypothesis being that they increase. If our null hypothesis is rejected, we assume the alternate hypothesis is true that that fish sizes increase over time, meaning certain ecological factors in Lake Wingra are causing the evolution of physical characteristics of fishes residing there over time, and should be looked into further. If our null hypothesis fails to reject, we can assume fish sizes in Lake Wingra are remaining constant and there is no cause for immediate concern.
+
+After generating data on the average length of the top 4 species over years, we can see that over the top 5 species (Blackcrappie, Bluegill, Goldenshiner, Largemouthbass, and Yellowperch), fish lengths tend to generally increase as time progresses. This provides intiial evidence that perhaps our alternate hypothesis that fish sizes increase over time could be true. 
+
+Next, our time series plot of average length vs weight of general fish over time seems to prove that length increases over time gradually, but weight expontentially increases over time, per the blue line shnooting from measurements of 50 to 200 mg+ as years go by, which provides evidence that fish weight increase over time. 
+
+Secondly, our regression model of predicted length values over time for Bluegill fish (specfically chosen for most data entries found in our data for highest accuracy rate of potential trend observation) predicted using weight tell us that predicted and actual values are fairly close to each other, meaning our predicted lengths were reasonably accurate, meaning the trends in the graph are reasonably correct for predicted vs actual values. For both values, generally the trend seems to increase, over time, as the red bars generally get higher by the right end of the graph (most modern time) and lowest by left end of the graph (least modern time), indicating that fish lengths over time are increasing, which adds further evidence for the alternate hypothesis. 
+
+Additionally, per the power law calcualtion, we are able to study the relationship between the length and the weight in 1996, and are able to discern that the relationship is not linear. To elaborate, since our t stat is negative, to calculate the p value of the two external tails, we do not subtract by 1. And since our p value ends up being 0, meaning it is strongly statistically different, so we reject the null hypothesis, and conclude the two variables are in fact not linearly related. 
+
+Third, our t-tests provide evidence of potential statistical differences in the means of our data for Bluegill fish again in different eras, for length vs weight. The first t test, for length, comes with a p value under the 0.05 threshold, meaning we reject the null hypothesis here, meaning there is a statistical difference between the mean of length values before 2009 to after/including 2009, meaning there was a significant change and fish lengths likely increased during the dataset's years.
+
+However, our second t-test for weight, comes with a p value over the 0.05 threshold, meaning we fail to reject the null hypothesis here, meaning there is no statistical difference between the mean of length values before 2009 to after/including 2009, meaning there was no significant change and fish lengths likely stayed constant during the datasets years.
+
+All in all, evidence seems to add up to the fact that in terms of fish length increases over time, and the alternate hypothesis is true in this case, as the average lengths trend seems to increase for the top 5 fishes, the t test shows change in length means for the Bluegill, and our predicted values also increase over time for Bluegill. But, in terms of weight, evidence seems to be inconclusive, as the time series plot evidences there is a change over time, but the t -test concludes the means of weight do not observe a change over the two eras, so we cannot come to a reasonable conclusion regarding the fluctuation of the weight of fishes in Lake Wingra. Additionally, we conclude that length and weight do have a relationship between their values, but this relationship appears to be non-linear based on our power law p value hypothesis of linearity.
+
+As it seems physical characteristics of the fish in Lake Wingra seem to be in change, it is likely that this is a modern cause of concern of the potential variations in habitat preferences or competitive interactions, indicating potential shifts in growth rates, dominant species, human activity, or resource availability. Conservation efforts should focus their attention on fish sizes to make sure our ecological systems are stable, due to these statistics. 
+
+Potential shortcomings in this analysis include the entire year of 2020 data filtered out of this data set due to a lack of precise data, most likely due to COVID-19. The potential inconsistencies brought up in our data from this loss of data could be limiting our observations of trends in Lake Wingra. Another potential shortcoming of this analysis could be that we focus solely on length, weight, and changes through time rather than also considering other potential factors, such as habitat characteristics and specific population dynamics, that we lack the proper data to observe. 
+
+For future work towards this subject, we may also see if sex or depth is a major factor in calculating enhance the accuracy of the trends and refine our understanding of fish populations in Lake Wingra further using these separate factors, which might play into different results per length, and might explain variatoin and change in trends. 
+
+We may also attempt to collect further data to confirm the current accuracy of predictions and their impact on fish population dynamics in Wingra in a few categories such as water quality, water depth of certain populations, temperature, different methods of measurement, and other environmental stressors that have the influence and long-term implications to affect population systems and health and lead the way to focus conservation effort. 
+
+> References
+
+^[https://ntl.limnology.wisc.edu/index.php/dataset/lake-wingra-fish-lengths-and-weights]
+^[https://www.google.com/]
